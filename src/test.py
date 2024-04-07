@@ -1,0 +1,5 @@
+print('/ :'+str(ord('/'))+ 'bin :'+bin(ord('/')))
+print('+ :'+str(ord('+'))+ 'bin :'+bin(ord('+')))
+print('* :'+str(ord('*'))+ 'bin :'+bin(ord('*')))
+print('- :'+str(ord('-'))+ 'bin :'+bin(ord('-')))
+print('= :'+str(ord('='))+ 'bin :'+bin(ord('=')))
