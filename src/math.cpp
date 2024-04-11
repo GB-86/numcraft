@@ -21,7 +21,7 @@ double sin(double angle){
     //double x7=x2*x5;
     double s= angle-x3*0.166666666667+x5*0.00833333333333;
     //-x7*0.000198412698413;
-    if (abs(s-1)<0.001){
+    if (abs(s-1)<0.0045){
         return (s<0)? -1:1;
     }
     return s;

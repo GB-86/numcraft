@@ -1,6 +1,5 @@
 #ifndef TEXTURE_H
-#define TEXTURE_H
-
+#define TEXTURE_H&
 
 struct texture
 {
@@ -12,6 +11,7 @@ struct texture
     unsigned short getPixel(unsigned char u,unsigned char v) const;
 };
 //00000 000  00 000000
+//Vector3 getSkyColor(Vector3 * rayDir,double dayTime);
 
 unsigned short getPixelFromTexture(unsigned char id,unsigned char u,unsigned char v,unsigned char face);
 /*

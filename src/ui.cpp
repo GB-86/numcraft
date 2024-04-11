@@ -1,44 +1,61 @@
 #include "display.h"
 #include "eadkpp.h"
 #include "ui.h"
-void draw_inventory(unsigned char * selectedSlotPos){
-    EADK::Display::pushRectUniform(EADK::Rect(54,34,212,132), EADK::Color(0x555555));
-    EADK::Display::pushRectUniform(EADK::Rect(56,36,208,128), EADK::Color(0xc6c6c6));
-    EADK::Display::pushRectUniform(EADK::Rect(60,40,200,120), EADK::Color(0xFFFFFF));
-    for(int y=2;y>=0; y--){
-        for(int x=4;x>=0; x--){
-            EADK::Display::pushRectUniform(EADK::Rect(64+x*40,44+y*40,32,32),EADK::Color(0x8b8b8b));
+#include "texture.h"
+#include "vector3.h"
+void draw_inventory(unsigned char *selectedSlotPos, unsigned char *inventoryData)
+{
+    EADK::Display::pushRectUniform(EADK::Rect(54, 34, 212, 132), EADK::Color(0x555555));
+    EADK::Display::pushRectUniform(EADK::Rect(56, 36, 208, 128), EADK::Color(0xc6c6c6));
+    EADK::Display::pushRectUniform(EADK::Rect(60, 40, 200, 120), EADK::Color(0xFFFFFF));
+    for (int y = 2; y >= 0; y--)
+    {
+        for (int x = 4; x >= 0; x--)
+        {
+            drawCase(x, y, *((inventoryData + (x + 5 * y) * 2)),*((inventoryData + (x + 5 * y) * 2+1)),false);
         }
     }
 }
-void draw_selectedInventorySlot(bool undraw,unsigned char * selectedSlotPos){
-    if (undraw){
-        EADK::Display::pushRectUniform(EADK::Rect(60+(*selectedSlotPos)*40,40+(*(selectedSlotPos+1))*40,40,40),EADK::Color(0x646464));
-        EADK::Display::pushRectUniform(EADK::Rect(64+(*selectedSlotPos)*40,44+(*(selectedSlotPos+1))*40,32,32),EADK::Color(0x8b8b8b));
+void drawCase(unsigned char slotx, unsigned char sloty, unsigned char id,unsigned char count,bool selected){
+    if(selected){
+        EADK::Display::pushRectUniform(EADK::Rect(60 + slotx * 40, 40 + sloty * 40, 32, 32), EADK::Color(0xFFFFFF));
     }
-    else
+    else{
+        EADK::Display::pushRectUniform(EADK::Rect(60 + slotx * 40, 40 + sloty * 40, 32, 32), EADK::Color(0x646464));
+    }
+
+    EADK::Display::pushRectUniform(EADK::Rect(64 + slotx * 40, 44 + sloty * 40, 32, 32), EADK::Color(0x8b8b8b));
+    
+    if(id!=0){
+        drawItem(slotx,sloty,id);
+    }
+    
+    if(count<10){
+        char countChar[2]="1";
+        EADK::Point p=EADK::Point(94+slotx*40,94+sloty*40);
+        EADK::Display::drawString("a",
+        p,true,EADK::Color(0b0),
+        EADK::Color(0x00FFFFFF));
+    }
+    else if (count<=64)
     {
-        EADK::Display::pushRectUniform(EADK::Rect(60+(*selectedSlotPos)*40,40+(*(selectedSlotPos+1))*40,40,40),EADK::Color(0xFFFFFF));
-        EADK::Display::pushRectUniform(EADK::Rect(64+(*selectedSlotPos)*40,44+(*(selectedSlotPos+1))*40,32,32),EADK::Color(0x8b8b8b));
+        //char countChar[3]={'0'+count/10,'0'+(count%10), 0};
+        //EADK::Display::drawString(countChar,EADK::Point(70+slotx*40,94+sloty*40),false,EADK::Color(0b0),EADK::Color(0xFFFFFFFF));
+    }
+    
+}
+void drawItem(unsigned char slotx, unsigned char sloty, unsigned char id)
+{
+    if (id != 0)
+    {
+        for (unsigned char y = 0; y < 8; y++)
+        {
+            for (unsigned char x = 0; x < 8; x++)
+            {
+                unsigned short col = getPixelFromTexture(id, x, 7-y, 4);
+                Vector3 color = {(double)((col >> 11) * 8), (double)(((col >> 5) & 0b0000000000111111) * 4), (double)((col & 0b0000000000011111) * 8)};
+                EADK::Display::pushRectUniform(EADK::Rect(64 + (slotx) * 40+x * 4, 44 + (sloty) * 40+ y * 4, 4, 4), EADK::Color(color.toColor()));
+            }
+        }
     }
 }
-/*
-def drawHotbar():
-    fill_rect(60,180,200,40,(100,100,100))
-    fill_rect(60+selected*40,180,40,40,(200,200,200))
-    for i in range(5):
-        fill_rect(64+i*40,184,32,32,(150,150,150))
-        if inv[0][i][0]!=0:
-            drawItem(64+i*40,184,inv[0][i][0])
-    for i in range(5):
-        if inv[0][i][1]>1 and inv[0][i][0]!=0:
-            draw_string(str(inv[0][i][1]),84+i*40,204,(255,255,255),(100,100,100))
-def drawInventory():
-
-    for i in range(3):
-        for j in range(5):
-            if (j,i)==invSelect: 
-                fill_rect(60+j*40,40+i*40,40,40,(100,100,100))
-            fill_rect(64+j*40,44+i*40,32,32,(139,139,139))
-            drawItem(64+j*40,44+i*40,getItem((j,2-i)))
-*/

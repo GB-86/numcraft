@@ -1,5 +1,8 @@
 #include "vector3.h"
 #include "math.h"
+
+
+
 // Default constructor
 using namespace std;
 Vector3::Vector3() : x(0.0f), y(0.0f), z(0.0f) {}
@@ -31,18 +34,13 @@ Vector3 Vector3::normalize() const {
 }
 unsigned int Vector3::toColor() const {
 
-
-  //  00000000 00000000 00000000 11111000
-  //  00000000 00000000 11111100 00000000
-  //  00000000 11111000 00000000 00000000
+  //  00000000 00000000 00000000 11111000 [blue]
+  //  00000000 00000000 11111100 00000000 [green]
+  //  00000000 11111000 00000000 00000000 [red]
 
     return ((((unsigned int)x)&255)<<16)   |((((unsigned int)y)&255)<<8)|     ((unsigned int)z)&255;
 }
-// Length of the vector
-double Vector3::length() const {
-    
-    return (x * x + y * y + z * z);
-}
+
 double Vector3::squareLength() const {
     return x * x + y * y + z * z;
 }

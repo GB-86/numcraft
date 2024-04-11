@@ -5,6 +5,21 @@
 #include "texture.h"
 #include "world.h"
 #include "ui.h"
+
+extern const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "numcraft";
+extern const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
+
+void switchItem(unsigned char s1, unsigned s2, unsigned char *inventoryData)
+{
+
+  unsigned char tempItem[2] = {*(inventoryData + s1 * 2), *(inventoryData + s1 * 2 + 1)};
+  *(inventoryData + s1 * 2) = *(inventoryData + s2 * 2);
+  *(inventoryData + s1 * 2 + 1) = *(inventoryData + s2 * 2 + 1);
+  *(inventoryData + s2 * 2) = tempItem[0];
+  *(inventoryData + s2 * 2 + 1) = tempItem[1];
+}
+
+// struct used by ray()
 struct rayResult
 {
   unsigned char blockId = 0;
@@ -14,27 +29,55 @@ struct rayResult
   unsigned short color;
   unsigned char skyFactor = 0;
 };
+
+// struct of the player
 struct Player
 {
-  Vector3 position = {1.1, 3, 1.3};
+  Vector3 position = {0.1, 3, 1.1};
   Vector3 rotation = {0.1, 0.1, 0};
+  unsigned char inventory[15][2] = {
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {4, 0},
+      {3, 0},
+      {2, 0},
+      {1, 13},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0},
+      {0, 0}}
+
+  ;
 };
 
-extern const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "numcraft";
-extern const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
+// render options
 const unsigned char pixelSize = 4;
-const float PI = 3.1415;
-const float fov = PI / 2;
+const float fov = 3.1415 / 2;
+rayResult cursorRayResult;
+
+// player info
 bool isInventoryOpen = false;
 unsigned char selectedSlotPos[2] = {1, 1};
-rayResult cursorRayResult;
-rayResult rayInfo;
+
+// return a ray information conserning a ray
 rayResult ray(Vector3 *rayPos, Vector3 *RayDir)
 {
   Vector3 pos = {rayPos->x, rayPos->y, rayPos->z};
   Vector3 dir = {RayDir->x, RayDir->y, RayDir->z};
-  signed char blockPos[3];
-  Vector3 rayFrac = Vector3((pos.x > 0) ? pos.x - (double)((int)pos.x) : 1.0 + (pos.x - (double)((int)pos.x)), (pos.y > 0) ? pos.y - (double)((int)pos.y) : 1.0 + (pos.y - (double)((int)pos.y)), (pos.z > 0) ? pos.z - (double)((int)pos.z) : 1.0 + (pos.z - (double)((int)pos.z)));
+  signed char blockPos[3] = {(pos.x < 0) ? ((signed char)pos.x) - 1 : (signed char)pos.x,
+                             (signed char)pos.y,
+                             (pos.z < 0) ? ((signed char)pos.z) - 1 : (signed char)pos.z};
+
+  // signed char subChunkPos[3]={((signed char)pos.x)/4 - (pos.x<0),pos.y/2,((signed char)pos.z)/4 - (pos.z<0)};
+  //Vector3 rayFrac = Vector3((pos.x > 0) ? pos.x - (double)((int)pos.x) : 1.0 + (pos.x - (double)((int)pos.x)), (pos.y > 0) ? pos.y - (double)((int)pos.y) : 1.0 + (pos.y - (double)((int)pos.y)), (pos.z > 0) ? pos.z - (double)((int)pos.z) : 1.0 + (pos.z - (double)((int)pos.z)));
+  Vector3 rayFrac = Vector3((pos.x <= 0) + (pos.x - (double)((int)pos.x)),
+                      (pos.y <= 0) + (pos.y - (double)((int)pos.y)), 
+                      (pos.z <= 0) + (pos.z - (double)((int)pos.z)));
   unsigned char uv[2];
   rayResult rayInfo;
   // return rayInfo;
@@ -48,8 +91,10 @@ rayResult ray(Vector3 *rayPos, Vector3 *RayDir)
   double distance = 0;
   unsigned char faceNormal;
   const double inverses[3] = {1 / dir.x, 1 / dir.y, 1 / dir.z};
+
   do
   {
+
     m = ((faces[0][0] == -1) - rayFrac.x) * inverses[0];
     faceNormal = 0;
     t = ((faces[1][1] == -1) - rayFrac.y) * inverses[1];
@@ -65,7 +110,7 @@ rayResult ray(Vector3 *rayPos, Vector3 *RayDir)
       faceNormal = 2;
     }
     pos = pos.add((dir).mul(m + 0.001));
-    if (pos.y > 16 || pos.y < 0)
+    if (pos.y > 16 || pos.y < 0 || pos.x<-32 ||pos.x>32 ||pos.z<-32 ||pos.x>32)
     {
       rayInfo.blockId = 0;
       return rayInfo;
@@ -76,10 +121,13 @@ rayResult ray(Vector3 *rayPos, Vector3 *RayDir)
       rayInfo.distance = distance;
       return rayInfo;
     }
-    rayFrac = Vector3((pos.x > 0) ? pos.x - (double)((int)pos.x) : 1.0 + (pos.x - (double)((int)pos.x)), (pos.y > 0) ? pos.y - (double)((int)pos.y) : 1.0 + (pos.y - (double)((int)pos.y)), (pos.z > 0) ? pos.z - (double)((int)pos.z) : 1.0 + (pos.z - (double)((int)pos.z)));
-    blockPos[0] = (pos.x < 0) ? ((signed char)pos.x) - 1 : (signed char)pos.x;
-    blockPos[1] = (signed char)pos.y;
-    blockPos[2] = (pos.z < 0) ? ((signed char)pos.z) - 1 : (signed char)pos.z;
+
+    rayFrac = Vector3((pos.x <= 0) + (pos.x - (double)((int)pos.x)),
+                      (pos.y <= 0) + (pos.y - (double)((int)pos.y)), 
+                      (pos.z <= 0) + (pos.z - (double)((int)pos.z)));
+    signed char blockPos[3] = {(pos.x < 0) ? ((signed char)pos.x) - 1 : (signed char)pos.x,
+                               (signed char)pos.y,
+                               (pos.z < 0) ? ((signed char)pos.z) - 1 : (signed char)pos.z};
     unsigned char blockId = getBlockFromWorld(&blockPos[0]);
     if (blockPos[1] > 16 || blockPos[1] < 0)
     {
@@ -136,7 +184,6 @@ rayResult ray(Vector3 *rayPos, Vector3 *RayDir)
 void renderFrame(Player *_player, double dayTime, bool stopWithKey)
 {
   // render a frame where stopWith determine if a key is pressed if it should stop the render
-
   double xangleReset = -fov / 2;
   double xangleStep = fov / (320 / pixelSize);
   double yangleStep = fov / (320 / pixelSize);
@@ -200,7 +247,6 @@ void renderFrame(Player *_player, double dayTime, bool stopWithKey)
     sunOutlineColor_ = sunOutlineColor[1];
     upperSkyColor = skyColor[1];
     lowerSkyColor = skyColor[0];
-    //
   }
   else
   {
@@ -415,7 +461,7 @@ int main(int argc, char *argv[])
             blockPos[2] += 1;
           }
 
-          changeBlockInWorld(&(blockPos[0]), 3);
+          changeBlockInWorld(&(blockPos[0]), player.inventory[10][0]);
         }
         renderFrame(&player, dayTime, false);
       }
@@ -437,6 +483,41 @@ int main(int argc, char *argv[])
         }
         dayTime += 0.03;
         renderFrame(&player, dayTime, false);
+      }
+      if (isInventoryOpen && keyboardState.keyDown(EADK::Keyboard::Key::Seven))
+      {
+        switchItem(10, selectedSlotPos[0] + selectedSlotPos[1] * 5, &player.inventory[0][0]);
+        drawCase(0,2,player.inventory[10][0],player.inventory[10][1],false);
+        drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
+        EADK::Timing::msleep(200);
+      }
+      if (isInventoryOpen && keyboardState.keyDown(EADK::Keyboard::Key::Eight))
+      {
+        switchItem(11, selectedSlotPos[0] + selectedSlotPos[1] * 5, &player.inventory[0][0]);
+        drawCase(1,2,player.inventory[11][0],player.inventory[11][1],false);
+        drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
+        EADK::Timing::msleep(200);
+      }
+      if (isInventoryOpen && keyboardState.keyDown(EADK::Keyboard::Key::Nine))
+      {
+        switchItem(12, selectedSlotPos[0] + selectedSlotPos[1] * 5, &player.inventory[0][0]);
+        drawCase(2,2,player.inventory[12][0],player.inventory[12][1],false);
+        drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
+        EADK::Timing::msleep(200);
+      }
+      if (isInventoryOpen && keyboardState.keyDown(EADK::Keyboard::Key::LeftParenthesis))
+      {
+        switchItem(13, selectedSlotPos[0] + selectedSlotPos[1] * 5, &player.inventory[0][0]);
+        drawCase(3,2,player.inventory[13][0],player.inventory[13][1],false);
+        drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
+        EADK::Timing::msleep(200);
+      }
+      if (isInventoryOpen && keyboardState.keyDown(EADK::Keyboard::Key::RightParenthesis))
+      {
+        switchItem(14, selectedSlotPos[0] + selectedSlotPos[1] * 5, &player.inventory[0][0]);
+        drawCase(4,2,player.inventory[14][0],player.inventory[14][1],true);
+        drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
+        EADK::Timing::msleep(200);
       }
       if (!isInventoryOpen && keyboardState.keyDown(EADK::Keyboard::Key::Backspace))
       {
@@ -471,7 +552,7 @@ int main(int argc, char *argv[])
         isInventoryOpen = !isInventoryOpen;
         if (isInventoryOpen)
         {
-          draw_inventory(&(selectedSlotPos[0]));
+          draw_inventory(&(selectedSlotPos[0]), &(player.inventory[0][0]));
         }
         EADK::Timing::msleep(200);
         // renderFrame(&player, dayTime, false);
@@ -480,9 +561,9 @@ int main(int argc, char *argv[])
       {
         if (selectedSlotPos[0] < 4)
         {
-          draw_selectedInventorySlot(false, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],false);
           selectedSlotPos[0]++;
-          draw_selectedInventorySlot(true, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
           EADK::Timing::msleep(200);
         }
       }
@@ -490,9 +571,9 @@ int main(int argc, char *argv[])
       {
         if (selectedSlotPos[0] > 0)
         {
-          draw_selectedInventorySlot(false, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],false);
           selectedSlotPos[0]--;
-          draw_selectedInventorySlot(true, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
           EADK::Timing::msleep(200);
         }
       }
@@ -500,9 +581,9 @@ int main(int argc, char *argv[])
       {
         if (selectedSlotPos[1] > 0)
         {
-          draw_selectedInventorySlot(false, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],false);
           selectedSlotPos[1]--;
-          draw_selectedInventorySlot(true, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
           EADK::Timing::msleep(200);
         }
       }
@@ -510,9 +591,9 @@ int main(int argc, char *argv[])
       {
         if (selectedSlotPos[1] < 2)
         {
-          draw_selectedInventorySlot(false, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],false);
           selectedSlotPos[1]++;
-          draw_selectedInventorySlot(true, &(selectedSlotPos[0]));
+          drawCase(selectedSlotPos[0],selectedSlotPos[1],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][0],player.inventory[selectedSlotPos[0]+selectedSlotPos[1]*5][1],true);
           EADK::Timing::msleep(200);
         }
       }

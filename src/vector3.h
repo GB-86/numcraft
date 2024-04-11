@@ -16,7 +16,6 @@ struct Vector3 {
     Vector3 mul(double scalar) const;
     double dot(const Vector3& v) const;
     Vector3 normalize() const;
-    double length() const;
     double squareLength() const;
     unsigned int toColor() const;
 };
